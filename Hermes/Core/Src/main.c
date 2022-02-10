@@ -316,7 +316,7 @@ int main(void)
 		  if (rxData[0] == 0x05) {
 			  // Kopierer databuffer og sender på CAN
 			  memcpy(csend, &rxData[2], 8);
-			  sendDataCAN(rxData[1], &hcan1);
+			  //sendDataCAN(rxData[1], &hcan1);
 
 		  } else {
 			  // Her kjem tilt ting
