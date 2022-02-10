@@ -140,7 +140,7 @@ void oppstartCAN(uint8_t filterGruppe, CAN_HandleTypeDef *canPort) {
 	canfilter.FilterMaskIdHigh = 0x00;
 	canfilter.FilterMaskIdLow = 0x00;
 	canfilter.FilterScale = CAN_FILTERSCALE_32BIT;
-	canfilter.FilterActivation = DISABLE;
+	canfilter.FilterActivation = ENABLE;
 	canfilter.SlaveStartFilterBank = 14;
 
 	txHeader.DLC = 8; // Number of bites to be transmitted max- 8
