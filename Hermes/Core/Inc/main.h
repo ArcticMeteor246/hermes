@@ -57,6 +57,13 @@ void Error_Handler(void);
 
 /* USER CODE BEGIN EFP */
 
+typedef enum {
+	PAKKE_START			= 0x02U,
+    PAKKE_STOPP			= 0x03U,
+	PAKKE_CAN			= 0x05U,
+	PAKKE_TILT			= 0x06U
+} PAKKE_OPPSETT;
+
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/

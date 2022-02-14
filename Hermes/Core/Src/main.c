@@ -28,6 +28,8 @@
 
 #include "tm_lib/tm_stm32_onewire.h"
 #include "tm_lib/tm_stm32_ds18b20.h"
+
+#include "metodar.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -64,62 +66,7 @@ static void MX_CAN1_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-void setPWM(TIM_TypeDef* timer, uint8_t kanal, uint32_t frekvens, uint8_t dutyCycle) {
-	// frekvens i Hz, dutyCycle i prosent.
-	if (frekvens > 2000) {
-		timer->PSC = 0;
-		if (frekvens <=200000) {
-			timer->ARR = (84000000 / frekvens) - 1; // ARR + 1 = 84M / (PSC+1 * frekvens)
-		} else {
-			timer->ARR = 359; // 200 000Hz med 0 i Prescale
-		}
-	} else {
-		timer->PSC = 839;
-		if (frekvens > 5) {
-			timer->ARR = (100000 / frekvens) - 1; // ARR + 1 = 84M / (PSC+1 * frekvens)
-		} else {
-			timer->ARR = 19999; // 5Hz med 719 i Prescale
-		}
-	}
 
-	uint32_t CCR = (uint32_t) (((float) timer->ARR / (float) 100.0) * (float) dutyCycle);
-	switch (kanal) {
-	case TIM_CHANNEL_1:
-		timer->CCR1 = CCR;
-		break;
-	case TIM_CHANNEL_2:
-		timer->CCR2 = CCR;
-		break;
-	case TIM_CHANNEL_3:
-		timer->CCR3 = CCR;
-		break;
-	case TIM_CHANNEL_4:
-		timer->CCR4 = CCR;
-		break;
-	}
-}
-
-int32_t skalerVerdi(int32_t inn, int32_t innMax, int32_t innMin, int32_t utMax, int32_t utMin) {
-	int32_t utVerdi = 0;
-	// Sjekke øvre og nedre gense på inn verdi
-	if (inn > innMax) {
-		inn = innMax;
-	} else if (inn < innMin) {
-		inn = innMin;
-	}
-
-	// Skaleringsformel
-	utVerdi = ( ( (utMax - utMin) / (innMax - innMin) ) * (inn - innMin) ) + utMin;
-
-	// Sjekke øvre og nedre grense på ut verdi
-	if (utVerdi > utMax) {
-		utVerdi = utMax;
-	} else if (utVerdi < utMin) {
-		utVerdi = utMin;
-	}
-
-	return utVerdi;
-}
 
 /*
  * CAN-Buss oppsett Start
@@ -302,9 +249,9 @@ int main(void)
 	  // Venter på full pakke, sjekk start og stopp byte.
 	  if (bytesAvailable >= 12) {
 	  if (CDC_ReadRxBuffer_FS(rxData, 1) == USB_CDC_RX_BUFFER_OK) {
-	  if (rxData[0] == 0x02) {
+	  if (rxData[0] == PAKKE_START) {
 	  if (CDC_ReadRxBuffer_FS(rxData, 11) == USB_CDC_RX_BUFFER_OK) {
-	  if (rxData[10] == 0x03) {
+	  if (rxData[10] == PAKKE_STOPP) {
 		  /*
 		   * rxData[0] er CAN/Tilt
 		   * rxData[1] er CAN/Kamera ID
@@ -312,14 +259,29 @@ int main(void)
 		   * rxData[10] er sluttbyte
 		   */
 
-		  // 0x05 for CAN, 0x06 for Tilt
-		  if (rxData[0] == 0x05) {
+		  if (rxData[0] == PAKKE_CAN) {
 			  // Kopierer databuffer og sender på CAN
 			  memcpy(csend, &rxData[2], 8);
 			  //sendDataCAN(rxData[1], &hcan1);
 
+		  } else if(rxData[0] == PAKKE_TILT) {
+
+			  switch(rxData[1]){
+			  // Kamera 0
+			  case 0:
+				  // data
+				  TIM2->CCR2 = skalerVerdiU(0, 180, 0, 220000, 50000);
+				  break;
+
+			  // Kamera 1
+			  case 1:
+				  //data
+
+				  break;
+
+			  }
+
 		  } else {
-			  // Her kjem tilt ting
 
 		  }
 
