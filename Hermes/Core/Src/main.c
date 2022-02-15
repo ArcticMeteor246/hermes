@@ -47,6 +47,8 @@
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
+ADC_HandleTypeDef hadc1;
+
 CAN_HandleTypeDef hcan1;
 
 TIM_HandleTypeDef htim2;
@@ -60,6 +62,7 @@ void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_TIM2_Init(void);
 static void MX_CAN1_Init(void);
+static void MX_ADC1_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -152,11 +155,12 @@ int main(void)
   MX_TIM2_Init();
   MX_USB_DEVICE_Init();
   MX_CAN1_Init();
+  MX_ADC1_Init();
   /* USER CODE BEGIN 2 */
 
   HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_2);
   TIM2->ARR = 1679999; // 50Hz
-  TIM2->CCR2 = 84000; // 5% Duty cycle
+  TIM2->CCR2 = skalerVerdi(98, 180, 0, 220000, 50000);
   //uint8_t Text[] = "Hello\r\n";
 
   // Read buffer
@@ -262,23 +266,39 @@ int main(void)
 		  if (rxData[0] == PAKKE_CAN) {
 			  // Kopierer databuffer og sender på CAN
 			  memcpy(csend, &rxData[2], 8);
-			  //sendDataCAN(rxData[1], &hcan1);
+			  sendDataCAN(rxData[1], &hcan1);
 
-		  } else if(rxData[0] == PAKKE_TILT) {
+		  } else if (rxData[0] == PAKKE_TILT) {
 
-			  switch(rxData[1]){
-			  // Kamera 0
-			  case 0:
-				  // data
-				  TIM2->CCR2 = skalerVerdiU(0, 180, 0, 220000, 50000);
+			  int8_t vinkel = (int8_t) rxData[2];
+			  int16_t vinkel_16 = (int16_t) vinkel;
+
+			  switch (rxData[1]) {
+			  // Kamera fram
+			  case 200:
+				  vinkel_16 += KAMERA_VINKEL_FRAM; // -40 -> +40 til 0 -> 80
+
+				  if (vinkel_16 >= KAMERA_VINKEL_FRAM_MAKS) {
+					  vinkel_16 = KAMERA_VINKEL_FRAM_MAKS;
+				  } else if (vinkel_16 <= KAMERA_VINKEL_FRAM_MIN) {
+					  vinkel_16 = KAMERA_VINKEL_FRAM_MIN;
+				  }
+
+				  TIM2->CCR2 = skalerVerdi(vinkel_16, 180, 0, 220000, 50000);
 				  break;
 
-			  // Kamera 1
-			  case 1:
-				  //data
+			  // Kamera bak
+			  case 201:
+				  vinkel_16 += KAMERA_VINKEL_FRAM; // -40 -> +40 til 0 -> 80
 
+				  if (vinkel_16 >= KAMERA_VINKEL_FRAM_MAKS) {
+					  vinkel_16 = KAMERA_VINKEL_FRAM_MAKS;
+				  } else if (vinkel_16 <= KAMERA_VINKEL_FRAM_MIN) {
+					  vinkel_16 = KAMERA_VINKEL_FRAM_MIN;
+				  }
+
+				  TIM2->CCR3 = skalerVerdi(vinkel_16, 180, 0, 220000, 50000);
 				  break;
-
 			  }
 
 		  } else {
@@ -393,6 +413,56 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
+}
+
+/**
+  * @brief ADC1 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_ADC1_Init(void)
+{
+
+  /* USER CODE BEGIN ADC1_Init 0 */
+
+  /* USER CODE END ADC1_Init 0 */
+
+  ADC_ChannelConfTypeDef sConfig = {0};
+
+  /* USER CODE BEGIN ADC1_Init 1 */
+
+  /* USER CODE END ADC1_Init 1 */
+  /** Configure the global features of the ADC (Clock, Resolution, Data Alignment and number of conversion)
+  */
+  hadc1.Instance = ADC1;
+  hadc1.Init.ClockPrescaler = ADC_CLOCK_SYNC_PCLK_DIV2;
+  hadc1.Init.Resolution = ADC_RESOLUTION_12B;
+  hadc1.Init.ScanConvMode = DISABLE;
+  hadc1.Init.ContinuousConvMode = DISABLE;
+  hadc1.Init.DiscontinuousConvMode = DISABLE;
+  hadc1.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_NONE;
+  hadc1.Init.ExternalTrigConv = ADC_SOFTWARE_START;
+  hadc1.Init.DataAlign = ADC_DATAALIGN_RIGHT;
+  hadc1.Init.NbrOfConversion = 1;
+  hadc1.Init.DMAContinuousRequests = DISABLE;
+  hadc1.Init.EOCSelection = ADC_EOC_SINGLE_CONV;
+  if (HAL_ADC_Init(&hadc1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time.
+  */
+  sConfig.Channel = ADC_CHANNEL_TEMPSENSOR;
+  sConfig.Rank = 1;
+  sConfig.SamplingTime = ADC_SAMPLETIME_3CYCLES;
+  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN ADC1_Init 2 */
+
+  /* USER CODE END ADC1_Init 2 */
+
 }
 
 /**

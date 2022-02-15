@@ -73,6 +73,14 @@ typedef enum {
 #define LD1_GPIO_Port GPIOC
 /* USER CODE BEGIN Private defines */
 
+#define KAMERA_VINKEL_FRAM			98u
+#define KAMERA_VINKEL_FRAM_MAKS		(KAMERA_VINKEL_FRAM + 30u)
+#define KAMERA_VINKEL_FRAM_MIN		(KAMERA_VINKEL_FRAM - 30u)
+
+#define KAMERA_VINKEL_BAK			90u;
+#define KAMERA_VINKEL_BAK_MAKS		(KAMERA_VINKEL_BAK + 30u)
+#define KAMERA_VINKEL_BAK_MIN		(KAMERA_VINKEL_BAK - 30u)
+
 /* USER CODE END Private defines */
 
 #ifdef __cplusplus
