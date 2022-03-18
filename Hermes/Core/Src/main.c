@@ -30,6 +30,7 @@
 #include "tm_lib/tm_stm32_ds18b20.h"
 
 #include "metodar.h"
+#include "shift.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -77,7 +78,7 @@ static void MX_ADC1_Init(void);
 CAN_RxHeaderTypeDef rxHeader; //CAN Bus Transmit Header
 CAN_TxHeaderTypeDef txHeader; //CAN Bus Receive Header
 uint8_t canRX[8] = {0,0,0,0,0,0,0,0};  //CAN Bus Receive Buffer
-uint8_t csend[] = {0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08}; // Tx Buffer
+uint8_t csend[] = {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00}; // Tx Buffer
 CAN_FilterTypeDef canfilter;
 uint32_t canMailbox; //CAN Bus Mail box variable
 
@@ -161,72 +162,15 @@ int main(void)
   HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_2);
   TIM2->ARR = 1679999; // 50Hz
   TIM2->CCR2 = skalerVerdi(98, 180, 0, 220000, 50000);
-  //uint8_t Text[] = "Hello\r\n";
 
   // Read buffer
   uint8_t rxData[16];
   memset(rxData, 0, 16);
 
-  // Read buffer
-  //memset(ttData, 97, 13);
-  //uint8_t duty = 0;
-
   oppstartCAN(5, &hcan1);
-  TM_OneWire_Init(&OW, TEMP01_GPIO_Port, TEMP01_Pin);
-  char buf[40];
-  uint8_t devices, i, count;
-  //uint8_t alarm_count;
-  uint8_t device[8][8];
-  //uint8_t alarm_device[8];
-  float temps[8];
-
-  count = 0;
-  devices = TM_OneWire_First(&OW);
-  while (devices) {
-	  /* Increase counter */
-	  count++;
-
-	  /* Get full ROM value, 8 bytes, give location of first byte where to save */
-  	  TM_OneWire_GetFullROM(&OW, device[count - 1]);
-
-	  /* Get next device */
-	  devices = TM_OneWire_Next(&OW);
-  }
-/*   If any devices on 1wire
-  	if (count > 0) {
-  		sprintf(buf, "Devices found on 1-wire: %d\n", count);
-  		TM_USART_Puts(USART1, buf);
-  		 Display 64bit rom code for each device
-  		for (j = 0; j < count; j++) {
-  			for (i = 0; i < 8; i++) {
-  				sprintf(buf, "0x%02X ", device[j][i]);
-  				TM_USART_Puts(USART1, buf);
-  			}
-  			TM_USART_Puts(USART1, "\n");
-  		}
-  	} else {
-  		TM_USART_Puts(USART1, "No devices on OneWire.\n");
-  	}*/
-  /* Go through all connected devices and set resolution to 12bits */
-  for (i = 0; i < count; i++) {
-	  /* Set resolution to 12bits */
-	  TM_DS18B20_SetResolution(&OW, device[i], TM_DS18B20_Resolution_12bits);
-  }
-
-
-
-/*  //HAL_Delay(2000);
-  uint16_t bytesAvailable = CDC_GetRxBufferBytesAvailable_FS();
-  while (!CDC_GetRxBufferBytesAvailable_FS()) {
-
-      uint16_t bytesToRead = bytesAvailable >= 8 ? 8 : bytesAvailable;
-	    if (CDC_ReadRxBuffer_FS(rxData, bytesToRead) == USB_CDC_RX_BUFFER_OK) {
-	        while (CDC_Transmit_FS(rxData, bytesToRead) == USBD_BUSY);
-      }
-  }
-  test_flag = 1;*/
-
-  //uint8_t csend[] = {0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08}; // Tx Buffer
+  uint16_t tall1 = 0;
+  uint16_t tall2 = 0;
+  uint16_t tall3 = 0;
 
   /* USER CODE END 2 */
 
@@ -237,24 +181,14 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-	  //CDC_Transmit_FS((uint8_t*) &"Start...\n", 9);
-	  //CDC_Transmit_FS(ttData, 13);
-/*	  TM_DS18B20_StartAll(&OW);
-	  while (!TM_DS18B20_AllDone(&OW));
 
-	  for (i = 0; i < count; i++) {
-		  if (TM_DS18B20_Read(&OW, device[i], &temps[i])) {
-			  sprintf(buf, "Temp %d: %3.5f; \n", i, temps[i]);
-			  CDC_Transmit_FS((uint8_t*) buf, strlen(buf) );
-		  }
-	  }*/
-	  uint16_t bytesAvailable = CDC_GetRxBufferBytesAvailable_FS();
+	  uint16_t bytesAvailable = CDC_GetRxBufferBytesAvailable_HS();
 
 	  // Venter på full pakke, sjekk start og stopp byte.
 	  if (bytesAvailable >= 12) {
-	  if (CDC_ReadRxBuffer_FS(rxData, 1) == USB_CDC_RX_BUFFER_OK) {
+	  if (CDC_ReadRxBuffer_HS(rxData, 1) == USB_CDC_RX_BUFFER_OK) {
 	  if (rxData[0] == PAKKE_START) {
-	  if (CDC_ReadRxBuffer_FS(rxData, 11) == USB_CDC_RX_BUFFER_OK) {
+	  if (CDC_ReadRxBuffer_HS(rxData, 11) == USB_CDC_RX_BUFFER_OK) {
 	  if (rxData[10] == PAKKE_STOPP) {
 		  /*
 		   * rxData[0] er CAN/Tilt
@@ -306,68 +240,35 @@ int main(void)
 		  }
 
 	  }}}}}
-	  /*
-	   uint16_t bytesToRead = bytesAvailable >= 8 ? 8 : bytesAvailable;
-		    if (CDC_ReadRxBuffer_FS(rxData, bytesToRead) == USB_CDC_RX_BUFFER_OK) {
-		        while (CDC_Transmit_FS(rxData, bytesToRead) == USBD_BUSY);
-	      }*/
-/*
-	    HAL_Delay(100);
-    	HAL_GPIO_TogglePin(LD1_GPIO_Port, LD1_Pin);
-    	csend[0] = 'p';
-	    sendDataCAN(95, &hcan1);*/
 
-	    //if (HAL_CAN_AddTxMessage(&hcan1,&txHeader,csend,&canMailbox) != HAL_OK) {
-	    //}
-/*	    if (test_flag) {
-	    	HAL_GPIO_TogglePin(LD1_GPIO_Port, LD1_Pin);
-	    	//uint8_t Text[16] = "";
-	    	//sprintf((char *) Text, "aaaaaaaa", canRX[0]);
+	  	if (tall3 >= 0xFFFF) {
+			if (tall1 >= 700) {
+				tall1 = 0;
+			}
+			tall1++;
+			tall2 = tall1 + 42;
 
-	    	memset(Text, '\0', sizeof(Text));
-	    	sprintf((char *) Text, " %X", canRX[1]);
-	    	while (CDC_Transmit_FS(Text, strlen((const char*) Text)) == USBD_BUSY);
+			memcpy(&csend[1], &tall1, 2);
+			memcpy(&csend[3], &tall2, 2);
 
-	    	memset(Text, '\0', sizeof(Text));
-	    	sprintf((char *) Text, " %X", canRX[2]);
-	    	while (CDC_Transmit_FS(Text, strlen((const char*) Text)) == USBD_BUSY);
+			tmpCANBuf8 = csend;
+			for (int i = 0; i < 8; i++) {
+				CANBufLengde = CANBufLengde + sprintf((char*) &ttData[CANBufLengde], "\\x%02X", *tmpCANBuf8);
+				tmpCANBuf8++;
+			}
 
-	    	memset(Text, '\0', sizeof(Text));
-	    	sprintf((char *) Text, " %X", canRX[3]);
-	    	while (CDC_Transmit_FS(Text, strlen((const char*) Text)) == USBD_BUSY);
+			sprintf((char*) &ttData[CANBufLengde], ";%d\n", (uint8_t) 140U);
+			CANBufLengde = 0;
 
-	    	memset(Text, '\0', sizeof(Text));
-	    	sprintf((char *) Text, "\r\n");
-	    	while (CDC_Transmit_FS(Text, strlen((const char*) Text)) == USBD_BUSY);
-	    	test_flag = 0;
-	    }*/
-    	//HAL_GPIO_WritePin(LD1_GPIO_Port, LD1_Pin, GPIO_PIN_RESET);
-	  //HAL_Delay(1000);
-	  //CDC_Transmit_FS(Text, 7);
-	  /*
-	  TIM2->CCR2 = skalerVerdi(0, 180, 0, 220000, 50000);
-	  HAL_Delay(3000);
+			CDC_Transmit_HS(ttData, strlen((char*) ttData));
+			tall3 = 0;
+	  	}
+	  	//tall3++;
+	  	HAL_Delay(400);
+	  	sprintf((char*) ttData, "\\x%02X\r\n", readByte());
+	  	CDC_Transmit_HS(ttData, strlen((char*) ttData));
 
-	  TIM2->CCR2 = skalerVerdi(180, 180, 0, 220000, 50000);
-	  HAL_Delay(3000);
 
-	  TIM2->CCR2 = skalerVerdi(120, 180, 0, 168000, 84000);
-	  HAL_Delay(1000);
-
-	  TIM2->CCR2 = skalerVerdi(180, 180, 0, 200000, 60000);
-	  HAL_Delay(1000);
-
-	  TIM2->CCR2 = skalerVerdi(120, 180, 0, 200000, 60000);
-	  HAL_Delay(1000);
-
-	  TIM2->CCR2 = skalerVerdi(60, 180, 0, 200000, 60000);
-	  HAL_Delay(1000);*/
-
-/*	  duty++;
-	  HAL_Delay(100);
-	  if (duty >= 181) {
-		  duty = 0;
-	  }*/
   }
   /* USER CODE END 3 */
 }
@@ -582,10 +483,26 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOB_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(GPIOA, SR_SH_Pin|SR_CLK_Pin|SR_CLCK_INH_Pin, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(TEMP01_GPIO_Port, TEMP01_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(LD1_GPIO_Port, LD1_Pin, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin : SR_OUT_Pin */
+  GPIO_InitStruct.Pin = SR_OUT_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
+  HAL_GPIO_Init(SR_OUT_GPIO_Port, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : SR_SH_Pin SR_CLK_Pin SR_CLCK_INH_Pin */
+  GPIO_InitStruct.Pin = SR_SH_Pin|SR_CLK_Pin|SR_CLCK_INH_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
   /*Configure GPIO pin : TEMP01_Pin */
   GPIO_InitStruct.Pin = TEMP01_Pin;
@@ -618,7 +535,7 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan11)
 	sprintf((char*) &ttData[CANBufLengde], ";%d\n", (uint8_t) rxHeader.StdId);
 	CANBufLengde = 0;
 
-	CDC_Transmit_FS(ttData, strlen((char*) ttData));
+	CDC_Transmit_HS(ttData, strlen((char*) ttData));
 
 }
 /* USER CODE END 4 */

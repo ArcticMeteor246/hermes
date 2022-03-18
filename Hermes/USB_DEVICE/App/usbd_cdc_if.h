@@ -124,6 +124,11 @@ uint8_t CDC_PeekRxBuffer_FS(uint8_t* Buf, uint16_t Len);
 uint16_t CDC_GetRxBufferBytesAvailable_FS();
 void CDC_FlushRxBuffer_FS();
 
+uint8_t CDC_ReadRxBuffer_HS(uint8_t* Buf, uint16_t Len);
+uint8_t CDC_PeekRxBuffer_HS(uint8_t* Buf, uint16_t Len);
+uint16_t CDC_GetRxBufferBytesAvailable_HS();
+void CDC_FlushRxBuffer_HS();
+
 /* USER CODE END EXPORTED_FUNCTIONS */
 
 /**

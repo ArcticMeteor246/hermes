@@ -67,6 +67,14 @@ typedef enum {
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
+#define SR_OUT_Pin GPIO_PIN_4
+#define SR_OUT_GPIO_Port GPIOA
+#define SR_SH_Pin GPIO_PIN_5
+#define SR_SH_GPIO_Port GPIOA
+#define SR_CLK_Pin GPIO_PIN_6
+#define SR_CLK_GPIO_Port GPIOA
+#define SR_CLCK_INH_Pin GPIO_PIN_7
+#define SR_CLCK_INH_GPIO_Port GPIOA
 #define TEMP01_Pin GPIO_PIN_1
 #define TEMP01_GPIO_Port GPIOB
 #define LD1_Pin GPIO_PIN_12
