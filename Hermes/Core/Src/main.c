@@ -26,9 +26,6 @@
 #include "usbd_cdc_if.h"
 #include <inttypes.h>
 
-#include "tm_lib/tm_stm32_onewire.h"
-#include "tm_lib/tm_stm32_ds18b20.h"
-
 #include "metodar.h"
 #include "shift.h"
 /* USER CODE END Includes */
@@ -48,7 +45,7 @@
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
-ADC_HandleTypeDef hadc1;
+ ADC_HandleTypeDef hadc1;
 
 CAN_HandleTypeDef hcan1;
 
@@ -94,7 +91,7 @@ void oppstartCAN(uint8_t filterGruppe, CAN_HandleTypeDef *canPort) {
 	canfilter.FilterActivation = ENABLE;
 	canfilter.SlaveStartFilterBank = 14;
 
-	txHeader.DLC = 8; // Number of bites to be transmitted max- 8
+	txHeader.DLC = 8; // Number of bytes to be transmitted, max- 8
 	txHeader.IDE = CAN_ID_STD;
 	txHeader.RTR = CAN_RTR_DATA;
 	txHeader.StdId = 0x00;
@@ -120,8 +117,6 @@ uint16_t teller_CAN = 0;
 uint32_t* tmpCANBuf32;
 uint8_t* tmpCANBuf8;
 uint8_t CANBufLengde = 0;
-
-TM_OneWire_t OW;
 
 /* USER CODE END 0 */
 
@@ -160,17 +155,32 @@ int main(void)
   /* USER CODE BEGIN 2 */
 
   HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_2);
-  TIM2->ARR = 1679999; // 50Hz
+  HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_3);
+  TIM2->ARR = 1679999;
   TIM2->CCR2 = skalerVerdi(98, 180, 0, 220000, 50000);
+  TIM2->CCR3 = skalerVerdi(98, 180, 0, 220000, 50000);
 
   // Read buffer
   uint8_t rxData[16];
   memset(rxData, 0, 16);
 
-  oppstartCAN(5, &hcan1);
-  uint16_t tall1 = 0;
-  uint16_t tall2 = 0;
-  uint16_t tall3 = 0;
+  oppstartCAN(0, &hcan1);
+
+  // Temp verdier til test data
+	HAL_GPIO_WritePin(SR_SH_GPIO_Port, SR_SH_Pin, GPIO_PIN_SET);
+	HAL_GPIO_WritePin(SR_CLCK_INH_GPIO_Port, SR_CLCK_INH_Pin, GPIO_PIN_SET);
+	HAL_GPIO_WritePin(SR_CLK_GPIO_Port, SR_CLK_Pin, GPIO_PIN_SET);
+
+  uint8_t dipSwitch = 0;
+  uint16_t testSensorTall1 = 0;
+  uint16_t testSensorTall2 = 0;
+  uint16_t testTeller1 = 0;
+  uint8_t  testData[64] = "123\n";
+  uint8_t* testBuf8;
+  uint8_t  testBufLengde = 0;
+  uint8_t  testArray[8] = {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00}; // Tx Buffer
+  uint8_t  testKontSend[8] = {0};
+  int8_t   testKontX = -128;
 
   /* USER CODE END 2 */
 
@@ -210,7 +220,7 @@ int main(void)
 			  switch (rxData[1]) {
 			  // Kamera fram
 			  case 200:
-				  vinkel_16 += KAMERA_VINKEL_FRAM; // -40 -> +40 til 0 -> 80
+				  vinkel_16 += KAMERA_VINKEL_FRAM; // -30 -> +30 offsett med 90
 
 				  if (vinkel_16 >= KAMERA_VINKEL_FRAM_MAKS) {
 					  vinkel_16 = KAMERA_VINKEL_FRAM_MAKS;
@@ -223,12 +233,12 @@ int main(void)
 
 			  // Kamera bak
 			  case 201:
-				  vinkel_16 += KAMERA_VINKEL_FRAM; // -40 -> +40 til 0 -> 80
+				  vinkel_16 += KAMERA_VINKEL_BAK; // -30 -> +30 offsett med 90
 
-				  if (vinkel_16 >= KAMERA_VINKEL_FRAM_MAKS) {
-					  vinkel_16 = KAMERA_VINKEL_FRAM_MAKS;
-				  } else if (vinkel_16 <= KAMERA_VINKEL_FRAM_MIN) {
-					  vinkel_16 = KAMERA_VINKEL_FRAM_MIN;
+				  if (vinkel_16 >= KAMERA_VINKEL_BAK_MAKS) {
+					  vinkel_16 = KAMERA_VINKEL_BAK_MAKS;
+				  } else if (vinkel_16 <= KAMERA_VINKEL_BAK_MIN) {
+					  vinkel_16 = KAMERA_VINKEL_BAK_MIN;
 				  }
 
 				  TIM2->CCR3 = skalerVerdi(vinkel_16, 180, 0, 220000, 50000);
@@ -239,34 +249,60 @@ int main(void)
 
 		  }
 
-	  }}}}}
+	  }}}
+	  // Ikkje Start byte
+	  else {
+		  // ting her??
+	  }}}
 
-	  	if (tall3 >= 0xFFFF) {
-			if (tall1 >= 700) {
-				tall1 = 0;
-			}
-			tall1++;
-			tall2 = tall1 + 42;
+	  	if (testTeller1 >= 0xFFFF) {
+		  	dipSwitch = readByte();
 
-			memcpy(&csend[1], &tall1, 2);
-			memcpy(&csend[3], &tall2, 2);
+		  	if (dipSwitch != 0xFF) {
+				// Testdata sensor kort til toppside
+				if (dipSwitch & 0b1) {
+					if (testSensorTall1 >= 700) {
+						testSensorTall1 = 0;
+					}
+					testSensorTall1++;
+					testSensorTall2 = testSensorTall1 + 42;
 
-			tmpCANBuf8 = csend;
-			for (int i = 0; i < 8; i++) {
-				CANBufLengde = CANBufLengde + sprintf((char*) &ttData[CANBufLengde], "\\x%02X", *tmpCANBuf8);
-				tmpCANBuf8++;
-			}
+					memcpy(&testArray[1], &testSensorTall1, 2);
+					memcpy(&testArray[3], &testSensorTall2, 2);
 
-			sprintf((char*) &ttData[CANBufLengde], ";%d\n", (uint8_t) 140U);
-			CANBufLengde = 0;
+					testBuf8 = testArray;
+					for (int i = 0; i < 8; i++) {
+						testBufLengde = testBufLengde + sprintf((char*) &testData[testBufLengde], "\\x%02X", *testBuf8);
+						testBuf8++;
+					}
 
-			CDC_Transmit_HS(ttData, strlen((char*) ttData));
-			tall3 = 0;
+					sprintf((char*) &testData[testBufLengde], ";%d\n", (uint8_t) 140U);
+					testBufLengde = 0;
+
+					CDC_Transmit_HS(testData, strlen((char*) testData));
+				}
+
+				// Testdata kontroll til CAN
+				if (dipSwitch & 0b10) {
+				  testKontX++;
+				  memset(testKontSend, (uint8_t) testKontX, 3);
+
+				  memcpy(csend, testKontSend, 8);
+				  sendDataCAN(70, &hcan1);
+				}
+
+				// Debugdata serial konsoll på
+				if (dipSwitch & 0b10000000) {
+					sprintf((char*) testData, "Dipswitch: 0b"BYTE_TO_BINARY_PATTERN"\r\n", BYTE_TO_BINARY(dipSwitch));
+					CDC_Transmit_HS(testData, strlen((char*) testData));
+				}
+		  	}
+		  	// Reset teller
+		  	testTeller1 = 0;
 	  	}
-	  	//tall3++;
-	  	HAL_Delay(400);
-	  	sprintf((char*) ttData, "\\x%02X\r\n", readByte());
-	  	CDC_Transmit_HS(ttData, strlen((char*) ttData));
+	  	//testTeller1++;
+	  	//sendDataCAN(90, &hcan1);
+	  	//HAL_Delay(1000);
 
 
   }
@@ -286,6 +322,7 @@ void SystemClock_Config(void)
   */
   __HAL_RCC_PWR_CLK_ENABLE();
   __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
+
   /** Initializes the RCC Oscillators according to the specified parameters
   * in the RCC_OscInitTypeDef structure.
   */
@@ -301,6 +338,7 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
+
   /** Initializes the CPU, AHB and APB buses clocks
   */
   RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
@@ -333,6 +371,7 @@ static void MX_ADC1_Init(void)
   /* USER CODE BEGIN ADC1_Init 1 */
 
   /* USER CODE END ADC1_Init 1 */
+
   /** Configure the global features of the ADC (Clock, Resolution, Data Alignment and number of conversion)
   */
   hadc1.Instance = ADC1;
@@ -351,6 +390,7 @@ static void MX_ADC1_Init(void)
   {
     Error_Handler();
   }
+
   /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time.
   */
   sConfig.Channel = ADC_CHANNEL_TEMPSENSOR;
@@ -455,7 +495,6 @@ static void MX_TIM2_Init(void)
   {
     Error_Handler();
   }
-  sConfigOC.Pulse = 0;
   if (HAL_TIM_PWM_ConfigChannel(&htim2, &sConfigOC, TIM_CHANNEL_3) != HAL_OK)
   {
     Error_Handler();
@@ -501,7 +540,7 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pin = SR_SH_Pin|SR_CLK_Pin|SR_CLCK_INH_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_MEDIUM;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
   /*Configure GPIO pin : TEMP01_Pin */
@@ -525,7 +564,6 @@ static void MX_GPIO_Init(void)
 void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan11)
 {
 	HAL_CAN_GetRxMessage(hcan11, CAN_RX_FIFO0, &rxHeader, canRX); //Receive CAN bus message to canRX buffer
-
 	tmpCANBuf8 = canRX;
 	for (int i = 0; i < 8; i++) {
 		CANBufLengde = CANBufLengde + sprintf((char*) &ttData[CANBufLengde], "\\x%02X", *tmpCANBuf8);
@@ -536,6 +574,7 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan11)
 	CANBufLengde = 0;
 
 	CDC_Transmit_HS(ttData, strlen((char*) ttData));
+	//CDC_Transmit_FS(ttData, strlen((char*) ttData));
 
 }
 /* USER CODE END 4 */
@@ -571,5 +610,3 @@ void assert_failed(uint8_t *file, uint32_t line)
   /* USER CODE END 6 */
 }
 #endif /* USE_FULL_ASSERT */
-
-/************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

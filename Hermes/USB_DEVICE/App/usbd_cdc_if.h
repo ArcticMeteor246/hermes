@@ -149,4 +149,3 @@ void CDC_FlushRxBuffer_HS();
 
 #endif /* __USBD_CDC_IF_H__ */
 
-/************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

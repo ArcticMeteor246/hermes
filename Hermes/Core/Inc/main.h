@@ -85,9 +85,21 @@ typedef enum {
 #define KAMERA_VINKEL_FRAM_MAKS		(KAMERA_VINKEL_FRAM + 30u)
 #define KAMERA_VINKEL_FRAM_MIN		(KAMERA_VINKEL_FRAM - 30u)
 
-#define KAMERA_VINKEL_BAK			90u;
+#define KAMERA_VINKEL_BAK			98u
 #define KAMERA_VINKEL_BAK_MAKS		(KAMERA_VINKEL_BAK + 30u)
 #define KAMERA_VINKEL_BAK_MIN		(KAMERA_VINKEL_BAK - 30u)
+
+#define BYTE_TO_BINARY_PATTERN "%c%c%c%c%c%c%c%c"
+#define BYTE_TO_BINARY(byte)  \
+  (byte & 0x80 ? '1' : '0'), \
+  (byte & 0x40 ? '1' : '0'), \
+  (byte & 0x20 ? '1' : '0'), \
+  (byte & 0x10 ? '1' : '0'), \
+  (byte & 0x08 ? '1' : '0'), \
+  (byte & 0x04 ? '1' : '0'), \
+  (byte & 0x02 ? '1' : '0'), \
+  (byte & 0x01 ? '1' : '0')
+
 
 /* USER CODE END Private defines */
 
@@ -96,5 +108,3 @@ typedef enum {
 #endif
 
 #endif /* __MAIN_H */
-
-/************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/
