@@ -88,7 +88,7 @@ void oppstartCAN(uint8_t filterGruppe, CAN_HandleTypeDef *canPort) {
 	canfilter.FilterMaskIdHigh = 0x00;
 	canfilter.FilterMaskIdLow = 0x00;
 	canfilter.FilterScale = CAN_FILTERSCALE_32BIT;
-	canfilter.FilterActivation = DISABLE;
+	canfilter.FilterActivation = ENABLE;
 	canfilter.SlaveStartFilterBank = 14;
 
 	txHeader.DLC = 8; // Number of bytes to be transmitted, max- 8
@@ -157,8 +157,8 @@ int main(void)
   HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_2);
   HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_3);
   TIM2->ARR = 1679999;
-  TIM2->CCR2 = skalerVerdi(98, 180, 0, 220000, 50000);
-  TIM2->CCR3 = skalerVerdi(98, 180, 0, 220000, 50000);
+  TIM2->CCR2 = skalerVerdi(KAMERA_VINKEL_FRAM, 180, 0, 220000, 50000);
+  TIM2->CCR3 = skalerVerdi(KAMERA_VINKEL_BAK, 180, 0, 220000, 50000);
 
   // Read buffer
   uint8_t rxData[16];
@@ -181,7 +181,6 @@ int main(void)
   uint8_t  testArray[8] = {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00}; // Tx Buffer
   uint8_t  testKontSend[8] = {0};
   int8_t   testKontX = -128;
-
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -257,6 +256,8 @@ int main(void)
 
 	  	if (testTeller1 >= 0xFFFF) {
 		  	dipSwitch = readByte();
+		  	float test = 4.5;
+		  	test = abs(test);
 
 		  	if (dipSwitch != 0xFF) {
 				// Testdata sensor kort til toppside

@@ -23,4 +23,54 @@ void setPWM(TIM_TypeDef* timer, uint8_t kanal, uint32_t frekvens, uint8_t dutyCy
 int32_t skalerVerdi(int32_t inn, int32_t innMax, int32_t innMin, int32_t utMax, int32_t utMin);
 float skalerVerdif(float inn, float innMax, float innMin, float utMax, float utMin);
 
+/*
+ * Flash
+ */
+
+#define dataIFlash 0xEE
+#define FLASH_START 0x80E0000
+
+struct regulatorType {
+	union {
+		float avstand;
+		uint32_t avstand_u;
+	};
+	// p og p_u har samme minne adresse, brukes for å hente ut float som uint.
+	union {
+		float p;
+		uint32_t p_u;
+	};
+	union {
+		float i;
+		uint32_t i_u;
+	};
+	union {
+		float d;
+		uint32_t d_u;
+	};
+	union {
+		float respons;
+		uint32_t respons_u;
+	};
+	union {
+		float tau;
+		uint32_t tau_u;
+	};
+	uint32_t type;
+};
+struct filterType {
+	uint32_t type;
+	uint32_t iir_aks_a;
+	uint32_t iir_a;
+	uint32_t fir;
+};
+typedef struct {
+	struct regulatorType reg;
+	struct filterType filter;
+} variabelStructType;
+
+/*
+ * Flash slutt
+ */
+
 #endif /* INC_METODAR_H_ */

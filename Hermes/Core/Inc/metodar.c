@@ -10,6 +10,8 @@
 // ******************************
 #include "main.h"
 #include <math.h>
+#include "metodar.h"
+#include <string.h>
 
 
 // ******************************
@@ -93,6 +95,54 @@ float skalerVerdif(float inn, float innMax, float innMin, float utMax, float utM
 
 	return utVerdi;
 }
+
+/*
+ * Flash
+ */
+
+uint32_t userConfig[32] __attribute__ ((section(".user_data")));
+variabelStructType varStruct = { {
+		.p_u = 123,
+		.i_u = 250,
+		.d_u = 560}
+};
+FLASH_EraseInitTypeDef bank0 = {.TypeErase = FLASH_TYPEERASE_SECTORS, .Sector = FLASH_SECTOR_11, .NbSectors = 1, .VoltageRange = FLASH_VOLTAGE_RANGE_3};
+
+void skrivFlash(variabelStructType* varS) {
+	// Bruker flash starter på FLASH_START (0x80E 0000) og er 128KB lang.
+	// Ved skriving må flash først nullstilles, Flash sector 11 er område frå 0x80E 0000 til 80F FFFF
+	uint32_t error = 0;
+	HAL_FLASH_Unlock();
+	HAL_FLASHEx_Erase(&bank0, &error);
+
+	// Er det data i flash som skal hentes inn ved neste boot?
+	HAL_FLASH_Program(FLASH_TYPEPROGRAM_WORD, FLASH_START, dataIFlash);
+
+	// Loop gjennom struct
+	uint32_t* tempStructPointer = (uint32_t*) varS;
+	uint32_t* tempAdrPointer = (uint32_t*) FLASH_START ;
+	tempAdrPointer++;
+	for (uint8_t i = 0; i < sizeof(variabelStructType); i++) {
+		HAL_FLASH_Program(FLASH_TYPEPROGRAM_WORD, (uint32_t) tempAdrPointer, (uint32_t) *tempStructPointer);
+		tempAdrPointer++;
+		tempStructPointer++;
+	}
+
+	HAL_FLASH_Lock();
+}
+
+void hentFlash(variabelStructType* varS) {
+	if (userConfig[0] == dataIFlash) {
+		memcpy(varS, &userConfig[1], sizeof(variabelStructType) );
+	} else {
+		// FEIL!
+	}
+}
+
+/*
+ * Flash ferdig
+ */
+
 
 /*float lesTemperatur(void) {
 	// WIP Defekt ???
